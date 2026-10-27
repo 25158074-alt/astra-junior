@@ -1,0 +1,829 @@
+ASTRA Junior: Become Mission-Ready
+Complete Game-Making Guide for the “Build a Junior
+Astronaut Mission Trainer” Challenge
+1. Project overview
+Game idea
+ASTRA Junior is an interactive training game in which a student becomes a junior astronaut. The
+player learns how a lunar or Martian outpost works, prepares equipment, makes mission
+decisions, handles emergencies, explains those decisions, and receives a personalized
+astronaut-training report.
+The game should teach one central idea:
+Every space-mission decision solves one problem while possibly creating another.
+The game should not feel like a textbook. The player should learn by making choices, seeing
+consequences, recovering from mistakes, and trying again.
+Target audience
+  Primary audience: students approximately 9–16 years old
+  Secondary audience: teachers, parents, judges, and STEM mentors
+  Interaction style: short missions, visual choices, simple explanations, repeatable challenges
+  Recommended play session: 10–20 minutes for a short demo; 30–45 minutes for the full ten-
+  level experience
+Recommended platform
+Build a browser-based game so judges can open it without installing special software.
+Recommended beginner-friendly technology:
+  HTML for page structure
+  CSS for layout and visual design
+  JavaScript for game rules
+  Phaser 3 if you want animations, maps, and game scenes
+  Local storage for saving progress and badges
+A simple HTML/CSS/JavaScript version is sufficient for a strong prototype. Add Phaser only if
+your team already knows it or needs richer animation.
+
+
+
+2. Your unique identity
+Many teams may build a game with resource bars. ASTRA Junior should stand out because it is
+a trainer, not only a survival simulator.
+Signature features
+A. Mission Readiness Score
+Evaluate the player across several skills:
+  Safety awareness
+  Resource management
+  Scientific thinking
+  Emergency response
+  Communication
+  Teamwork
+  Sustainability
+  Decision explanation
+Do not reduce performance to one score. Give the player a clear skill profile.
+B. Cause-and-effect map
+When the player makes an important decision, show the chain of consequences:
+Use emergency battery
+
+Greenhouse remains active
+
+Food production is protected
+
+Backup power becomes lower
+
+The next emergency becomes more dangerous
+This visual map is one of the strongest ways to show engineering trade-offs.
+C. Explain Your Decision
+After major decisions, ask the player to select or write why they chose an action.
+Example:
+“I stopped the laboratory because keeping oxygen and water systems active was more important.”
+Reward reasoning that identifies priorities, risks, and consequences—not only the choice that
+produces the highest score.
+D. Mission Memory
+At the end of the game, create a personalized report:
+  Mission duration
+  Best decision
+  Most dangerous decision
+  Systems protected
+  Systems neglected
+  Strongest astronaut skill
+  Recommended next training
+  Unique mission title
+Example title: The Careful Systems Thinker.
+
+
+
+3. Core gameplay loop
+Every level should follow the same simple loop so students understand how to play:
+1. Briefing — Mission Control explains the objective.
+2. Learn — The player receives a short explanation or interactive tutorial.
+3. Prepare — The player chooses equipment, resources, or priorities.
+4. Act — The player makes one or more mission decisions.
+5. Consequence — Systems change and an event may occur.
+6. Explain — The player explains the most important decision.
+7. Review — The game shows what improved, what worsened, and why.
+8. Advance — The player earns a badge, unlocks the next level, or repeats the level.
+Keep each level focused on one main learning objective. Do not introduce every system at once.
+
+
+
+4. Game systems
+4.1 Main resources
+Use six main resources. Display them with icons, labels, and short tooltips.
+
+Resource     Meaning       Example
+                           effects
+
+Oxygen       Air           Reduced
+             available     by crew
+             for the       activity;
+             crew          restored
+                           by life-
+                           support
+                           systems
+
+Water        Drinking,     Recycled
+             hygiene,      but not
+             and plant-    perfectly
+             growing
+             supply
+
+Food         Food          Consumed
+             available     over time;
+             for the       greenhous
+             crew          e can
+                           produce
+                           more
+
+Power        Electricity   Generated,
+             for           stored,
+             equipmen      and
+             t             consumed
+                           by
+                           systems
+
+Materials    Constructi    Used for
+             on and        shielding,
+             repair        buildings,
+             supplies      and
+                           repairs
+
+Crew         Physical      Affected
+health       and           by
+             mental        radiation,
+             condition     fatigue,
+                           hunger,
+                           and
+                           emergenci
+                         es
+
+You can add communication status, mission time, and science points as secondary indicators.
+4.2 Suggested simple rules
+Use rules that are understandable rather than scientifically overwhelming.
+Example per-turn changes:
+oxygen = oxygen - crew_size * oxygen_use
+water = water - crew_size * water_use
+food = food - crew_size * food_use
+power = power + power_generated - power_consumed
+For a greenhouse:
+if greenhouse_powered and greenhouse_water >= plant_water_cost:
+   food = food + food_produced
+   water = water - plant_water_cost
+For an emergency:
+if power < minimum_power:
+   life_support_efficiency = life_support_efficiency - 1
+   risk_level = risk_level + 1
+Do not present the equations to young players unless you include an optional “Engineer Mode.”
+4.3 Trade-off design rule
+Every important action should have:
+  At least one benefit
+  At least one cost
+  At least one possible delayed consequence
+Example:
+
+Action       Immediate Immediate Possible
+              benefit   cost     delayed
+                                 effect
+
+Activate  Restores       Uses         Less
+emergency power          backup       power
+battery                  storage      during the
+                                      next
+                                      storm
+
+Stop      Saves          Less plant Future
+greenhous power          growth     food
+e lights                            shortage
+
+Add          Improves    Uses         Less
+radiation    safety      materials    space for
+shielding                and          another
+                         constructi   facility
+                         on time
+
+4.4 Failure and recovery
+Do not end the game immediately after one mistake. Use three states:
+  Stable: The outpost is functioning normally.
+  Warning: A system is at risk; the player can recover.
+  Critical: The player must make an emergency decision.
+Only end a mission when a critical system remains unsupported after the recovery opportunity.
+Then show the cause of failure and allow a retry.
+
+
+
+5. The ten levels
+Level 1 — Welcome to Astronaut Training
+Learning objective
+Understand the basic outpost systems.
+Player task
+Identify which system is affected by each situation.
+Content
+Introduce oxygen, water, food, power, temperature, and communication.
+Example interactions
+  Broken air filter oxygen problem
+  Empty battery power problem
+  Water leak water problem
+  Failed heater temperature problem
+Success condition
+The player correctly identifies at least 4 of 5 situations.
+Failure recovery
+Show a short explanation and allow the player to try again.
+Badge
+Systems Spotter
+Implementation note
+Use cards or icons rather than complex simulation. This level should take 2–3 minutes.
+
+
+
+Level 2 — Choose Your Spacesuit
+Learning objective
+Understand preparation and equipment prioritization.
+Player task
+Prepare a spacesuit and mission kit for a short surface excursion.
+Equipment choices
+  Oxygen tank
+  Radiation protection
+  Thermal protection
+  Communication device
+  Tool kit
+  Emergency battery
+  Sample container
+Give the player limited weight capacity, such as 5 equipment slots.
+Mission scenario
+The astronaut must collect a rock sample near the outpost and return safely.
+Success condition
+The player selects all essential equipment and returns before oxygen or safety becomes critical.
+Main trade-off
+More tools allow more science but increase weight and reduce flexibility.
+Badge
+Mission Preparer
+
+
+
+Level 3 — Build Your Mission Kit
+Learning objective
+Plan supplies under limited storage and weight.
+Player task
+Pack supplies for the first outpost mission.
+Available supplies
+  Food
+  Water
+  Batteries
+  Repair tools
+  Medical supplies
+  Seeds
+  Scientific instruments
+  Spare filters
+Rules
+Set both a storage limit and a mass limit. The player cannot take everything.
+Success condition
+The player packs enough supplies to cover the mission and at least one likely emergency.
+Main trade-off
+Carrying more emergency equipment may require sacrificing science equipment or food variety.
+Badge
+Resource Planner
+
+
+
+Level 4 — Lunar Power Challenge
+Learning objective
+Understand energy generation, storage, and prioritization.
+Player task
+Keep a lunar base operating through a long low-sunlight period.
+Systems
+  Solar panels
+  Batteries
+  Heating
+  Life support
+  Lighting
+  Communications
+  Laboratory
+Player decisions
+  Which systems remain active?
+  Should the laboratory be paused?
+  Should battery power be reserved for life support?
+  Should greenhouse lighting be reduced?
+Success condition
+Maintain life support and communication until sunlight returns.
+Main trade-off
+Scientific progress and food production compete with survival systems for power.
+Badge
+Power Guardian
+
+
+
+Level 5 — Radiation and EVA Mission
+Learning objective
+Understand radiation risk, mission duration, and safety limits.
+Player task
+Send an astronaut outside to inspect equipment.
+Player choices
+  Select shielding level
+  Select route
+  Choose mission duration
+  Decide whether to collect science samples
+  Decide when to return
+Event
+A radiation warning appears during the surface activity.
+Success condition
+Complete the essential inspection without exceeding the safety limit.
+Main trade-off
+Staying longer can produce more science but increases risk.
+Badge
+Safety Specialist
+
+
+
+Level 6 — Greenhouse and Water Mission
+Learning objective
+Understand sustainability and closed-loop resource systems.
+Player task
+Produce enough food while protecting the water supply.
+Systems
+  Greenhouse lighting
+  Water recycling
+  Plant selection
+  Temperature control
+  Food storage
+  Oxygen production
+Plant choices
+  Fast-growing crop: produces food quickly but uses more water
+  Efficient crop: uses less water but grows slowly
+  Oxygen-producing plant: helps the air system but provides less food
+Success condition
+Keep the crew supplied for the target period without exhausting water.
+Main trade-off
+The best food system is not always the fastest-growing system.
+Badge
+Life-Support Farmer
+
+
+
+Level 7 — Mars Communication Delay
+Learning objective
+Practice independent decision-making with incomplete information.
+Player task
+Respond to a developing problem before Mission Control can answer.
+Possible problems
+  Water leak
+  Damaged rover
+  Power warning
+  Medical concern
+  Computer sensor failure
+Game mechanic
+Mission Control messages arrive after a delay. The player must act using the information
+currently available.
+Success condition
+Protect the most important system while avoiding unnecessary actions.
+Main trade-off
+Waiting may provide better information but allow the problem to become worse.
+Badge
+Independent Decision-Maker
+
+
+
+Level 8 — Dust Storm Emergency
+Learning objective
+Respond to a major environmental event.
+Player task
+Protect the Martian outpost during a dust storm.
+Available actions
+  Save battery power
+  Pause experiments
+  Reduce greenhouse lighting
+  Move the rover indoors
+  Repair or clean solar panels
+  Keep communication active
+Success condition
+Survive the storm and keep life support operating.
+Main trade-off
+The player cannot protect every system equally. They must prioritize essentials.
+Badge
+Storm Commander
+
+
+
+Level 9 — Crew Health and Teamwork
+Learning objective
+Understand that astronauts are part of the mission system.
+Player task
+Create a schedule that balances work, exercise, sleep, science, maintenance, and personal time.
+Events
+  A crew member becomes exhausted
+  A team disagreement delays a repair
+  A medical issue requires attention
+  An experiment deadline approaches
+Player choices
+  Reassign tasks
+  Delay science work
+  Schedule rest
+  Request help from another crew member
+  Use a robot for a simple task
+Success condition
+Complete the essential mission work while keeping crew health above the safe level.
+Main trade-off
+Working longer may complete more tasks now but reduce safety and performance later.
+Badge
+Crew Leader
+
+
+
+Level 10 — Mission Commander Challenge
+Learning objective
+Combine all previous skills in a complete mission.
+Scenario
+A dust storm is approaching. The greenhouse needs power. An astronaut is outside repairing a
+solar panel. The water recycler has stopped working. Mission Control cannot respond
+immediately.
+Player task
+Prioritize actions, assign crew members, manage resources, and explain the reasoning behind
+the most important decision.
+Systems combined
+  Oxygen
+  Water
+  Food
+  Power
+  Materials
+  Radiation safety
+  Communication delay
+  Crew health
+  Science objectives
+  Emergency repair
+Success condition
+Complete the mission objectives while keeping the crew and critical systems safe.
+Evaluation
+The final level should consider both outcome and reasoning. A player who makes a safe decision
+but loses some science should not automatically score worse than a risky player who earns
+more science.
+Badge
+Junior Mission Commander
+
+
+
+6. Scoring system
+Use a transparent scoring model. Avoid mysterious points.
+Suggested score categories
+Each category can be scored from 0 to 100:
+  Safety
+  Resource management
+  Planning
+  Science
+  Emergency response
+  Teamwork
+  Sustainability
+  Decision explanation
+Suggested weighting
+final_score =
+   safety * 0.25 +
+   resource_management * 0.20 +
+   emergency_response * 0.15 +
+   teamwork * 0.15 +
+   sustainability * 0.10 +
+   science * 0.10 +
+   decision_explanation * 0.05
+For young students, show the result as categories and feedback rather than exposing the
+formula.
+Feedback example
+Safety: Excellent
+You protected life support before optional equipment.
+
+Resource management: Good
+You saved water but used too much backup power.
+
+Next training goal:
+Practice planning for a second emergency.
+
+
+7. Screen and interface plan
+Screen 1: Title screen
+Include:
+  ASTRA Junior logo
+  Start Training button
+  Continue Mission button
+  How to Play button
+  Credits button
+Screen 2: Astronaut profile
+Show:
+  Player name or call sign
+  Current rank
+  Badges
+  Completed levels
+  Skill profile
+Screen 3: Mission briefing
+Show:
+  Location
+  Mission objective
+  Mission time
+  Main risk
+  Available resources
+Screen 4: Outpost dashboard
+Show:
+  Resource cards
+  Crew condition
+  Current event
+  Available actions
+  Mission timer
+  Help button
+Screen 5: Decision screen
+Each choice should include:
+  Action name
+  Short description
+  Immediate cost
+  Possible risk
+  Confirm button
+Do not reveal every future consequence. The player should think, but the interface must remain
+fair.
+Screen 6: Explain Your Decision
+Use either:
+  Multiple-choice reasoning for younger students
+  Short written response for older students
+  Optional voice recording if time allows
+Screen 7: Mission review
+Show:
+  Resources at start and end
+  Major decisions
+  Cause-and-effect chain
+  Score categories
+  Badge earned
+  Retry or next-level button
+
+
+
+8. Technical build plan
+Folder structure
+junior-astronaut-trainer/
+    index.html
+    styles.css
+    app.js
+    data/
+       levels.js
+       events.js
+       badges.js
+    assets/
+       icons/
+       backgrounds/
+       audio/
+    README.md
+Level data structure
+const level = {
+ id: 1,
+ title: "Welcome to Astronaut Training",
+ location: "Training Center",
+ objective: "Identify the outpost system affected by each problem.",
+ startingResources: {
+   oxygen: 100,
+   water: 100,
+   food: 100,
+   power: 100,
+   materials: 50,
+   health: 100
+  },
+  actions: [],
+  successCondition: {
+    correctAnswers: 4
+  },
+  badge: "Systems Spotter"
+};
+Core game-state object
+const gameState = {
+  currentLevel: 1,
+  resources: {
+    oxygen: 100,
+    water: 100,
+    food: 100,
+    power: 100,
+    materials: 50,
+    health: 100
+  },
+  skills: {
+    safety: 0,
+    planning: 0,
+    science: 0,
+    teamwork: 0,
+    sustainability: 0,
+    emergencyResponse: 0
+  },
+  decisions: [],
+  badges: []
+};
+Decision-processing sequence
+1. Player selects an action.
+2. Show a confirmation screen.
+3. Apply immediate resource changes.
+4. Trigger the relevant event.
+5. Apply delayed consequences if appropriate.
+6. Add the decision to the mission log.
+7. Ask the player to explain the decision.
+8. Update skill scores.
+9. Show the cause-and-effect explanation.
+10. Check whether the level is complete.
+Save progress
+Use browser local storage:
+localStorage.setItem(
+  "astraJuniorProgress",
+  JSON.stringify(gameState)
+);
+Always include a Reset Progress option for testing.
+
+
+
+9. Art, sound, and accessibility
+Visual style
+Use a clean mission-control style:
+  Dark navy or charcoal background
+  Bright cyan for information
+  Orange for warnings
+  Green for stable systems
+  Red for critical emergencies
+  Large icons and readable labels
+Use original illustrations or properly licensed assets. Keep an asset-credit file in the project.
+Accessibility requirements
+  Do not use color alone to communicate status.
+  Add text labels such as “Warning” and “Critical.”
+  Use readable font sizes.
+  Provide subtitles for audio.
+  Add keyboard navigation.
+  Avoid flashing effects.
+  Use simple language and explain technical terms.
+  Make the game playable without sound.
+Audio
+Use sound sparingly:
+  Soft confirmation sound for safe actions
+  Warning tone for system problems
+  Calm mission-control voice or text for briefings
+  Optional ambient spacecraft sound
+The game should still work if all audio is muted.
+
+
+
+10. Development schedule
+Day 1: Concept and planning
+  Confirm the target audience.
+  Choose Moon, Mars, or both.
+  Sketch the main screens.
+  Define the six resources.
+  Write the rules for Level 1.
+Day 2: Core prototype
+  Build the title screen.
+  Build the dashboard.
+  Add resource cards.
+  Add one decision screen.
+  Add success and failure states.
+Day 3: Levels 1–3
+  Add the tutorial.
+  Add spacesuit selection.
+  Add mission-kit packing.
+  Test the basic progression.
+Day 4: Levels 4–6
+  Add power management.
+  Add radiation and surface activity.
+  Add the greenhouse system.
+Day 5: Levels 7–8
+  Add communication delay.
+  Add the dust-storm event.
+  Add emergency recovery.
+Day 6: Levels 9–10
+  Add crew scheduling.
+  Add the final commander challenge.
+  Add the final report.
+Day 7: Polish and testing
+  Improve layout and wording.
+  Add badges.
+  Test all buttons.
+  Fix progression and save errors.
+  Record the demo presentation.
+If you have more time, spend it on testing and explanation quality rather than adding many extra
+features.
+
+
+
+11. Testing plan
+Test the game with at least three types of people:
+Student testers
+Ask:
+  Did you know what to do?
+  Which level was most enjoyable?
+  Which word or icon was confusing?
+  Did you understand why your decision had consequences?
+Non-technical testers
+Ask them to play without help. This identifies confusing instructions and interface problems.
+Technical testers
+Check:
+  Buttons work after repeated clicks.
+  Progress saves and loads.
+  The game cannot produce impossible resource values.
+  A player cannot skip required levels accidentally.
+  The game works on different screen sizes.
+  The game still works after refresh.
+Balance testing
+For each level, record:
+  Completion time
+  Number of retries
+  Most common failed action
+  Most confusing instruction
+  Average score
+If almost everyone fails, simplify the explanation. If everyone succeeds immediately, add a
+meaningful trade-off.
+
+
+
+12. How to prove originality
+No project can guarantee that nobody will notice similarities to another project. The safest
+approach is to demonstrate that your concept, writing, design, and implementation were
+developed by your team.
+Keep evidence
+Save:
+  Brainstorming sketches
+  Dated design decisions
+  Wireframes
+  Early prototypes
+  Testing notes
+  Team contributions
+  Version history
+  Asset licenses and credits
+Avoid copying
+Do not copy:
+  Another game’s interface
+  Character designs
+  Text or mission scripts
+  Sound effects without permission
+  Code without following its license
+  A known game’s exact scoring and progression structure
+Make the project recognizably yours
+Your strongest original combination is:
+1. Mission training rather than simple survival
+2. Cause-and-effect system maps
+3. Explain Your Decision reasoning
+4. Mission Readiness skill profile
+5. Mission Memory report
+6. Ten-level progression from trainee to commander
+If AI tools help with code, images, or writing, follow the event’s rules and disclose assistance
+when required. Human team members should make the final design decisions, test the game,
+edit the content, and understand the code they submit.
+13. Final presentation plan
+Use a three-minute demonstration.
+Demonstration structure
+First 20 seconds: Problem
+Explain that students often learn space engineering as separate facts, but real missions require
+decisions between competing needs.
+Next 30 seconds: Your solution
+Introduce ASTRA Junior as a training game where students become junior astronauts, make
+decisions, explain their reasoning, and learn from consequences.
+Next 90 seconds: Gameplay
+Demonstrate one mission:
+1. Show the briefing.
+2. Show the resource dashboard.
+3. Make a difficult choice.
+4. Show the immediate effect.
+5. Show the delayed consequence.
+6. Explain the cause-and-effect map.
+7. Show the readiness feedback.
+Final 40 seconds: Why it matters
+Explain that the game builds systems thinking, safety awareness, planning, communication, and
+problem-solving through play.
+Suggested closing sentence
+ASTRA Junior does not ask students to memorize how astronauts work; it lets them practice
+thinking like astronauts.
+
+
+
+14. Minimum viable version
+If your team has limited time, build this version first:
+  One title screen
+  One astronaut profile
+  One dashboard
+  Four resources: oxygen, water, food, power
+  Levels 1, 4, 6, 8, and 10
+  Three emergency events
+  Explain Your Decision feature
+  Mission Readiness report
+  One original visual theme
+Then add Levels 2, 3, 5, 7, and 9 if time allows. A polished five-level prototype is stronger than an
+unfinished ten-level game.
+For the competition submission, however, present the full ten-level structure even if some levels
+are simplified.
+15. Final checklist
+Educational quality
+  [ ] Every level has a clear learning objective.
+  [ ] The player receives an explanation after important decisions.
+  [ ] The game demonstrates engineering trade-offs.
+  [ ] Failure teaches rather than simply punishes.
+Gameplay quality
+  [ ] The player always knows the current objective.
+  [ ] Every choice has a visible benefit and cost.
+  [ ] Levels become gradually more difficult.
+  [ ] The final level combines earlier skills.
+Technical quality
+  [ ] All buttons work.
+  [ ] Progress can be saved.
+  [ ] The game can be restarted.
+  [ ] No resource becomes negative without a clear reason.
+  [ ] The game works on the target browser and screen size.
+Originality and credits
+  [ ] Interface and illustrations are original or properly licensed.
+  [ ] External assets are credited.
+  [ ] NASA or other educational information is referenced.
+  [ ] AI assistance is disclosed if required.
+  [ ] Development evidence is preserved.
+Presentation quality
+  [ ] The team can explain the central idea in one sentence.
+  [ ] The demo shows a meaningful decision.
+  [ ] The demo shows both immediate and delayed consequences.
+  [ ] The final report is visible.
+  [ ] The project explains why it is a trainer, not merely a resource game.
+
+
+
+References
+1. 2026 NASA Space Apps Challenge problem description provided in the conversation: a
+   challenge about creating interactive STEM content for lunar or Martian outpost decisions
+   involving life support, radiation shielding, power, and food production.
+2. Challenge title provided in the conversation: “Build a Junior Astronaut Mission Trainer.”
+3. The ten-level ASTRA Junior concept developed in the conversation, including astronaut
+   preparation, lunar power, radiation, greenhouse systems, Mars communication delay, dust
+storms, crew health, and mission command.
+
