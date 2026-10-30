@@ -126,27 +126,68 @@ function levelComplete(state: MissionProgress, passed: boolean, summary: string,
   const nextAvailable = getLevel(level.id + 1) ? level.id + 1 : state.unlockedThrough
   const unlockedThrough = passed ? Math.max(state.unlockedThrough, Math.min(TOTAL_LEVELS, nextAvailable)) : state.unlockedThrough
   const elapsedSeconds = Math.max(0, state.elapsedSeconds + Math.floor((now - state.startedAt) / 1000))
-  const strongestSkill = (Object.keys(state.skills) as SkillKey[]).reduce((a, b) => state.skills[a] >= state.skills[b] ? a : b)
-  const weakestSkill = (Object.keys(state.skills) as SkillKey[]).reduce((a, b) => state.skills[a] <= state.skills[b] ? a : b)
-  const readiness = readinessScore(state.skills)
-  const nextTraining = passed ? LEVEL_TITLES.find(l => l.id === Math.min(TOTAL_LEVELS, level.id + 1))?.title ?? 'Mission Commander Challenge' : 'Retry this mission and try a new plan.'
-  const result: MissionOutcome = { level: level.id, passed, title: passed ? `${level.badge} earned` : 'Mission practice complete', summary, badge: passed ? level.badge : '', elapsedSeconds, readiness, strongestSkill, weakestSkill, nextTraining }
+  
   const skills = { ...state.skills }
   if (passed) {
     skills.planning = clamp(skills.planning + 4)
     skills.explanation = clamp(skills.explanation + 3)
   }
+
+  const strongest = strongestSkill(skills)
+  const weakest = weakestSkill(skills)
+  const readiness = readinessScore(skills)
+  const nextTraining = passed ? LEVEL_TITLES.find(l => l.id === Math.min(TOTAL_LEVELS, level.id + 1))?.title ?? 'Mission Commander Challenge' : 'Retry this mission and try a new plan.'
+  
+  const result: MissionOutcome = { 
+    level: level.id, 
+    passed, 
+    title: passed ? `${level.badge} earned` : 'Mission practice complete', 
+    summary, 
+    badge: passed ? level.badge : '', 
+    elapsedSeconds, 
+    readiness, 
+    strongestSkill: strongest, 
+    weakestSkill: weakest, 
+    nextTraining 
+  }
+
   return { ...state, skills, completedLevels, badges, unlockedThrough, phase: 'outcome', elapsedSeconds, latestOutcome: result, statusMessage: summary, missionLog: addLog(state, passed ? 'Mission complete' : 'Recovery opportunity', summary, passed ? 'success' : 'warning', now) }
 }
 
 export function beginMission(state: MissionProgress, levelId: number, now = Date.now()): MissionProgress {
   const level = getLevel(levelId)
   if (!level || levelId > state.unlockedThrough) return { ...state, statusMessage: 'That mission is still locked. Complete the earlier training first.' }
+  
+  // Apply delayed consequences from the PREVIOUS decision if any
+  const resources = { ...level.startingResources }
+  let log = state.missionLog
+  
+  const lastDecision = state.decisions.at(-1)
+  if (lastDecision) {
+    const prevLevel = getLevel(lastDecision.level)
+    const prevAction = prevLevel?.actions?.find(a => lastDecision.outcome.startsWith(a.outcome))
+    if (prevAction?.delayedDelta) {
+      const deltas = prevAction.delayedDelta
+      let detail = "Applied consequences from your earlier command: "
+      const parts: string[] = []
+      for (const key of Object.keys(deltas) as ResourceKey[]) {
+        const change = deltas[key] ?? 0
+        if (change === 0) continue
+        resources[key] = clamp(resources[key] + change)
+        parts.push(`${getResourceMeta(key).label} ${change > 0 ? "+" : ""}${change}%`)
+      }
+      if (parts.length > 0) {
+        detail += parts.join(", ")
+      log = [...log, { id: `delayed-${now}`, time: stamp(now), title: 'Delayed Consequence', detail, kind: 'info' as const }].slice(-100)
+      }
+    }
+  }
+
   return {
-    ...state, currentLevel: levelId, resources: { ...level.startingResources }, initialResources: { ...level.startingResources },
+    ...state, currentLevel: levelId, resources, initialResources: { ...resources },
     phase: 'playing', quizIndex: 0, quizCorrect: 0, quizAnswers: [], loadout: [], kitItems: [], selectedActionId: '', explanationDraft: '', startedAt: now,
     elapsedSeconds: 0, latestOutcome: null, statusMessage: level.objective,
-    missionLog: addLog(state, `Level ${String(levelId).padStart(2, '0')} briefing`, level.briefing, 'info', now),
+    missionLog: addLog({ ...state, missionLog: log }, `Level ${String(levelId).padStart(2, '0')} briefing`, level.briefing, 'info', now),
   }
 }
 

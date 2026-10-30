@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { getLevel, LEVEL_TITLES, TOTAL_LEVELS, type SkillValues } from '../src/game/mission-data'
 import {
-  answerSystem, beginMission, clearProgress, confirmDecision, confirmKit, confirmLoadout, createFreshProgress,
-  kitTotals, loadProgress, parseProgress, PROGRESS_KEY, readinessScore, saveProgress,
+  answerSystem, beginMission, clearProgress, confirmDecision, confirmKit, confirmLoadout, createFreshProgress, getResourceMeta,
+  kitTotals, loadProgress, parseProgress, PROGRESS_KEY, readinessScore, saveProgress, strongestSkill, weakestSkill,
   selectDecision, toggleGear, toggleSupply, type StorageLike,
 } from '../src/game/mission-state'
 
@@ -140,5 +140,51 @@ describe('ASTRA Junior mission state', () => {
     expect(readinessScore(all)).toBe(100)
     expect(readinessScore({ ...all, safety: 0, resourceManagement: 0, planning: 0, science: 0, emergencyResponse: 0, teamwork: 0, sustainability: 0, explanation: 0 })).toBe(0)
     expect(readinessScore({ ...all, safety: 0, resourceManagement: 0, science: 0, emergencyResponse: 0, teamwork: 0, sustainability: 0, explanation: 0 })).toBe(14)
+  })
+
+  it('computes latestOutcome metrics from final skills including post-mission bonuses', () => {
+    const level = getLevel(2)!
+    let state = beginMission({ ...createFreshProgress(), unlockedThrough: 2 }, 2)
+    for (const id of level.essentialGear!) state = toggleGear(state, id)
+    state = toggleGear(state, 'emergency-battery')
+    state = { ...state, explanationDraft: 'Safety first for the EVA mission.' }
+    state = confirmLoadout(state)
+    
+    const outcome = state.latestOutcome!
+    const finalSkills = state.skills
+    expect(outcome.readiness).toBe(readinessScore(finalSkills))
+    expect(outcome.strongestSkill).toBe(strongestSkill(finalSkills))
+    expect(outcome.weakestSkill).toBe(weakestSkill(finalSkills))
+  })
+
+  it('applies delayed resource consequences when transitioning between levels', () => {
+    // Level 7 has a decision that impacts Level 8 via delayedDelta
+    let state = { ...createFreshProgress(), unlockedThrough: 10 }
+    state = beginMission(state, 7)
+    const action = getLevel(7)!.actions!.find(a => a.id === 'delay-isolate')!
+    state = selectDecision(state, action.id)
+    state = { ...state, explanationDraft: 'Isolate the leak immediately.' }
+    state = confirmDecision(state)
+    
+    // Level 8 starting resources should be modified by Level 7's delayedDelta
+    const level8Base = getLevel(8)!.startingResources
+    state = beginMission(state, 8)
+    
+    const waterChange = action.delayedDelta!.water!
+    expect(state.resources.water).toBe(level8Base.water + waterChange)
+    expect(state.missionLog.some(l => l.title === 'Delayed Consequence' && l.detail.includes('Water'))).toBe(true)
+  })
+
+  it('ensures delayed consequences do not persist after a reset', () => {
+    let state = { ...createFreshProgress(), unlockedThrough: 10 }
+    state = beginMission(state, 7)
+    state = selectDecision(state, 'delay-isolate')
+    state = { ...state, explanationDraft: 'Action with delayed delta.' }
+    state = confirmDecision(state)
+    
+    state = createFreshProgress()
+    state = beginMission(state, 1)
+    expect(state.resources).toEqual(getLevel(1)!.startingResources)
+    expect(state.missionLog.some(l => l.title === 'Delayed Consequence')).toBe(false)
   })
 })
