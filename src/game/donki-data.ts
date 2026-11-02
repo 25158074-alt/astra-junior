@@ -24,7 +24,7 @@ export const DONKI_VIEW_URL = 'https://ccmc.gsfc.nasa.gov/tools/DONKI/'
 
 export async function loadDonkiSnapshot(): Promise<DonkiSnapshot | null> {
   try {
-    const response = await fetch('/data/donki-cme-snapshot.json', { cache: 'no-cache' })
+    const response = await fetch(`${import.meta.env.BASE_URL}data/donki-cme-snapshot.json`, { cache: 'no-cache' })
     if (!response.ok) return null
     const data = await response.json() as DonkiSnapshot
     if (!data || !Array.isArray(data.records) || !data.sourceUrl) return null
