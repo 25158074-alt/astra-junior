@@ -27,6 +27,7 @@ The game practices systems thinking, safety awareness, planning, resource trade-
 ## Development structure
 
 - `src/game/mission-data.ts` — reusable mission, system, equipment, supply, resource, and skill definitions.
+- `src/game/donki-data.ts` and `public/data/donki-cme-snapshot.json` — typed NASA CCMC DONKI CME data loader and the archived real-data snapshot used by the space-weather panel.
 - `src/game/mission-state.ts` — bounded mission rules, progress, accessibility-friendly statuses, readiness score, and safe local-storage parsing.
 - `src/game/outpost-scene.ts` — original procedural Three.js outpost scene.
 - `src/ui/mission-ui.ts` — semantic mission-control UI and complete ten-level mission interactions.
@@ -38,6 +39,7 @@ The project continues the initialized Three.js + TypeScript + Vite starter. It k
 ## Credits and attribution
 
 - ASTRA Junior mission names, structure, educational purpose, and project brief: supplied by the project author. Challenge reference: “Build a Junior Astronaut Mission Trainer,” based on the 2026 NASA Space Apps Challenge problem description supplied by the project author. **ASTRA Junior is not produced, sponsored, or endorsed by NASA.**
+- NASA space-weather grounding: the app includes an archived snapshot of real Coronal Mass Ejection records from the [NASA CCMC DONKI API](https://ccmc.gsfc.nasa.gov/DONKI/WS/get/CME?startDate=2026-10-27&endDate=2026-11-02), retrieved 2 November 2026. DONKI is the Space Weather Database of Notifications, Knowledge, Information. The latest and maximum cataloged CME speeds are shown as mission context for radiation and EVA planning. These values are not radiation-dose measurements, forecasts, or operational guidance. The [CCMC DONKI information page](https://ccmc.gsfc.nasa.gov/tools/DONKI/) explains the catalog and its prototype/research-use limitations.
 - Outpost scene and UI: original procedural shapes and authored interface copy in this project; no NASA mission-control screenshots, branded assets, or external game artwork are used.
 - Typography: system UI font stack with platform fallbacks; no font download is required.
 - Three.js: MIT License. Rapier 3D: Apache License 2.0 (included in the supplied starter dependency; the ASTRA trainer does not rely on its platformer scene).

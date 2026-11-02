@@ -324,3 +324,15 @@ button:focus-visible, a:focus-visible, textarea:focus-visible { outline:2px soli
 .decision-card-top{display:flex;justify-content:space-between;align-items:center;font:600 .68rem/1.2 var(--mono);letter-spacing:.08em;color:#b7c9dc}.decision-card>b{font-size:1rem}.decision-card>p{margin:0;color:var(--muted);line-height:1.45;font-size:.86rem}.decision-benefit,.decision-cost,.decision-delay{font-size:.73rem;line-height:1.35;color:#b8c8d8}.decision-benefit strong{color:#80e7bb}.decision-cost strong{color:#ffd18a}.decision-delay strong{color:#d9bfff}.decision-risk{padding:.22rem .42rem;border-radius:99px;font-size:.59rem}.risk-low{color:#8ee8bb;background:rgba(79,210,143,.12)}.risk-medium{color:#ffd28b;background:rgba(245,177,72,.12)}.risk-high{color:#ff9d9d;background:rgba(239,101,101,.12)}
 .decision-selected{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem;padding:1rem;border-radius:14px;background:rgba(99,233,242,.08);border:1px solid rgba(99,233,242,.22)}.decision-selected span{display:grid;gap:.3rem}.decision-selected b{font:600 .65rem/1.2 var(--mono);letter-spacing:.08em;color:var(--cyan)}.decision-selected small{color:#dce7f3;line-height:1.4}.decision-hint{display:block;margin:1rem 0;padding:.8rem;border-radius:12px;background:rgba(117,153,187,.08)}
 @media (max-width:900px){.decision-grid{grid-template-columns:1fr}.decision-card{min-height:0}.decision-selected{align-items:flex-start;flex-direction:column}.decision-selected .primary-button{width:100%}}
+
+/* NASA DONKI space-weather attribution panel */
+.donki-panel { border-color: rgba(255, 200, 121, .18); background: linear-gradient(145deg, rgba(86, 66, 31, .12), rgba(9, 23, 36, .88)); }
+.donki-status { display: grid; gap: 4px; margin: 8px 0; padding: 8px; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; background: rgba(4, 15, 24, .45); }
+.donki-status b { font: 7px var(--mono); letter-spacing: .08em; }
+.donki-status span, .donki-explanation, .donki-attribution { color: #9db0bb; font-size: 7px; line-height: 1.45; }
+.donki-low b { color: #8ee8bb; }.donki-watch b { color: #ffd28b; }.donki-high b { color: #ff9d9d; }
+.donki-panel > p { color: #c3d4da; font-size: 8px; line-height: 1.45; }
+.donki-panel .donki-explanation { margin-top: 6px; color: #aebfc7; }
+.donki-attribution { display: block; margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(140,181,204,.08); }
+.donki-attribution a { color: var(--cyan); text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 1240px) { .donki-panel > p { font-size: 7px; } }

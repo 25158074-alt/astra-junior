@@ -3,6 +3,7 @@ import type { Renderer } from '../engine/renderer'
 import type { I18n } from '../engine/i18n'
 import type { SaveStore } from '../engine/save'
 import { getLevel, LEVEL_TITLES, RESOURCE_META, SKILL_META, SYSTEM_OPTIONS, type MissionLevel, type ResourceKey, type SkillKey } from '../game/mission-data'
+import { DONKI_SOURCE_URL, DONKI_VIEW_URL, donkiTrainingBand, formatDonkiDate, latestDonkiCme, loadDonkiSnapshot, maxDonkiSpeed, type DonkiSnapshot } from '../game/donki-data'
 import { OutpostScene } from '../game/outpost-scene'
 import { beginMission, clearProgress, confirmDecision, confirmKit, confirmLoadout, createFreshProgress, kitTotals, loadProgress, logRelativeTime, readinessScore, resetToFresh, resourceStatus, retryMission, saveProgress, selectDecision, toggleGear, toggleSupply, answerSystem, strongestSkill, weakestSkill, type MissionProgress } from '../game/mission-state'
 
@@ -17,6 +18,7 @@ export class MissionUI {
   private showQuizFeedback = false
   private mobileNavOpen = false
   private lastClockUpdate = 0
+  private donkiSnapshot: DonkiSnapshot | null = null
 
   constructor(canvas: HTMLCanvasElement, renderer: Renderer, private readonly settings: SaveStore, private readonly audio: Audio, private readonly i18n: I18n) {
     this.i18n.set('en')
@@ -31,6 +33,7 @@ export class MissionUI {
     this.root.addEventListener('input', event => this.onInput(event))
     this.root.addEventListener('keydown', event => this.onKeyDown(event))
     this.render()
+    void loadDonkiSnapshot().then(snapshot => { this.donkiSnapshot = snapshot; this.render() })
     if (this.progress.phase === 'welcome') this.root.querySelector<HTMLButtonElement>('[data-action="start-fresh"]')?.focus({ preventScroll: true })
   }
 
@@ -105,6 +108,7 @@ export class MissionUI {
         <aside class="mission-aside" aria-label="Current mission brief">
           <section class="objective-card glass-card"><div class="aside-top"><span class="section-kicker">CURRENT OBJECTIVE</span><span class="level-number">${String(this.activeLevel().id).padStart(2, '0')}</span></div><span class="objective-badge">${escapeHtml(this.activeLevel().badgeMark)} ${escapeHtml(this.activeLevel().badge)}</span><h2>${escapeHtml(this.activeLevel().shortTitle)}</h2><p>${escapeHtml(this.activeLevel().objective)}</p><div class="objective-risk"><span class="risk-icon" aria-hidden="true">!</span><span><b>MAIN RISK</b><small>${escapeHtml(this.activeLevel().risk)}</small></span></div><div class="objective-checklist"><b>MISSION CHECKLIST</b>${this.checklistMarkup()}</div><div class="control-message"><span class="control-avatar">MC</span><span><b>MISSION CONTROL</b><small>${escapeHtml(this.activeLevel().missionControl)}</small></span></div><button class="primary-button report-button" type="button" data-action="report">OPEN MISSION REPORT <span aria-hidden="true">↗</span></button></section>
             <section class="panel field-panel"><div class="panel-heading"><div><span class="section-kicker">LIVE EVENT</span><h2>Situation update</h2></div><span class="event-icon" aria-hidden="true">⌁</span></div><p>${escapeHtml(this.activeLevel().event)}</p><div class="event-status"><span class="live-dot" aria-hidden="true"></span>${this.eventStatus()}</div></section>
+            ${this.donkiMarkup()}
             <section class="panel field-panel crew-card"><div class="panel-heading"><div><span class="section-kicker">CREW STATUS</span><h2>Team Aurora</h2></div><span class="crew-count">03</span></div><div class="crew-row"><span class="crew-avatar crew-one">AR</span><span><b>Alex Rivera</b><small>Mission specialist · rested</small></span><span class="crew-health">${Math.round(this.progress.resources.health)}%</span></div><div class="crew-row"><span class="crew-avatar crew-two">MK</span><span><b>Mina Kim</b><small>Life-support engineer</small></span><span class="crew-health">READY</span></div><div class="crew-row"><span class="crew-avatar crew-three">JT</span><span><b>Jules Tan</b><small>Science officer</small></span><span class="crew-health">READY</span></div></section>
             <section class="badge-card"><span class="badge-star" aria-hidden="true">✧</span><div><b>${this.progress.badges.length ? `${this.progress.badges.length} BADGE${this.progress.badges.length === 1 ? '' : 'S'} EARNED` : 'BADGE AWAITS'}</b><small>${this.progress.badges.length ? escapeHtml(this.progress.badges[this.progress.badges.length - 1]) : `Complete Level ${this.activeLevel().id} to earn ${escapeHtml(this.activeLevel().badge)}.`}</small></div></section>
           </aside>
@@ -117,7 +121,7 @@ export class MissionUI {
       <dialog class="astra-dialog" id="help-dialog" aria-labelledby="help-title"><button class="dialog-close" type="button" data-close aria-label="Close help">×</button><span class="section-kicker">FLIGHT SCHOOL</span><h2 id="help-title">How to play</h2><ol class="help-steps"><li><b>Read the briefing.</b><span>Mission Control tells you what the crew needs and what could go wrong.</span></li><li><b>Prepare or choose.</b><span>Match a system, pack your suit, or balance the kit limit.</span></li><li><b>Watch the trade-off.</b><span>Each choice has a benefit, a cost, and may change a later mission.</span></li><li><b>Explain your thinking.</b><span>Good astronauts share why safety, science, or resources mattered.</span></li><li><b>Review and retry.</b><span>Your mission memory shows what changed and what to practice next.</span></li></ol><p class="dialog-callout">Every space-mission decision solves one problem while possibly creating another.</p><button class="primary-button" type="button" data-close>GOT IT</button></dialog>
       <dialog class="astra-dialog report-dialog" id="report-dialog" aria-labelledby="report-title"></dialog>
       <dialog class="astra-dialog" id="reset-dialog" aria-labelledby="reset-title"><button class="dialog-close" type="button" data-close aria-label="Close reset dialog">×</button><span class="section-kicker">TRAINING RECORD</span><h2 id="reset-title">Reset training?</h2><p>This clears ASTRA Junior progress, mission choices, and badges saved in this browser. Your browser settings and other data are unchanged.</p><div class="dialog-actions"><button class="secondary-button" type="button" data-close>KEEP PROGRESS</button><button class="danger-button" type="button" data-action="confirm-reset">RESET TRAINING</button></div></dialog>
-      <dialog class="astra-dialog" id="credits-dialog" aria-labelledby="credits-title"><button class="dialog-close" type="button" data-close aria-label="Close credits">×</button><span class="section-kicker">PROJECT CREDITS</span><h2 id="credits-title">Made for curious minds</h2><p>ASTRA Junior is an original educational simulation created to practice systems thinking, safe planning, resource choices, and teamwork.</p><ul><li>Outpost scene and interface: original procedural work.</li><li>Typography: system UI font stack with platform fallbacks.</li><li>3D engine: Three.js (MIT); Rapier 3D remains in the supplied starter (Apache-2.0).</li><li>Challenge: “Build a Junior Astronaut Mission Trainer,” based on the user-supplied 2026 NASA Space Apps Challenge brief. ASTRA Junior is not a NASA product or endorsement.</li><li>AI assistance: code and authored draft content were prepared with AI assistance; review and adapt before formal submission.</li></ul><p class="credits-small">No external mission-control screenshots, branded characters, or generated scene assets are used.</p></dialog>
+      <dialog class="astra-dialog" id="credits-dialog" aria-labelledby="credits-title"><button class="dialog-close" type="button" data-close aria-label="Close credits">×</button><span class="section-kicker">PROJECT CREDITS</span><h2 id="credits-title">Made for curious minds</h2><p>ASTRA Junior is an original educational simulation created to practice systems thinking, safe planning, resource choices, and teamwork.</p><ul><li>Outpost scene and interface: original procedural work.</li><li>Typography: system UI font stack with platform fallbacks.</li><li>NASA space-weather data: archived CME records from the <a href="${DONKI_SOURCE_URL}" target="_blank" rel="noreferrer">NASA CCMC DONKI API</a>, retrieved 2 November 2026. DONKI means Space Weather Database of Notifications, Knowledge, Information.</li><li>Data use: the CME speed is used as kid-friendly mission context for radiation and EVA planning. It is not a radiation-dose measurement, forecast, or operational guidance.</li><li>DONKI is provided by NASA's Community Coordinated Modeling Center and the Moon-to-Mars Space Weather Analysis Office. ASTRA Junior is not a NASA product, endorsement, or official spacecraft control system. See the <a href="${DONKI_VIEW_URL}" target="_blank" rel="noreferrer">DONKI information page</a>.</li><li>Three.js: MIT; Rapier 3D remains in the supplied starter (Apache-2.0).</li><li>AI assistance: code and authored draft content were prepared with AI assistance; review and adapt before formal submission.</li></ul><p class="credits-small">No external mission-control screenshots, branded characters, or generated scene assets are used.</p></dialog>
       <div class="sr-only" aria-live="polite" data-announcer></div>
     </div>`
   }
@@ -262,6 +266,15 @@ export class MissionUI {
     const elapsed = this.progress.phase === 'playing' ? Math.max(this.progress.elapsedSeconds, Math.floor((Date.now() - this.progress.startedAt) / 1000)) : this.progress.elapsedSeconds
     return clock(elapsed)
   }
+  private donkiMarkup(): string {
+    const latest = latestDonkiCme(this.donkiSnapshot)
+    const speed = maxDonkiSpeed(this.donkiSnapshot)
+    const band = donkiTrainingBand(speed)
+    const status = this.donkiSnapshot ? `${this.donkiSnapshot.records.length} archived CME events · ${formatDonkiDate(this.donkiSnapshot.window.startDate)}–${formatDonkiDate(this.donkiSnapshot.window.endDate)}` : 'Loading NASA space-weather snapshot…'
+    const cmeLine = latest ? `Latest cataloged CME: ${formatDonkiDate(latest.startTime)} · ${latest.speedKmS ?? '—'} km/s` : 'NASA DONKI snapshot is not available right now.'
+    const levelNote = this.activeLevel().id === 5 ? `Level 5 uses this reading to frame EVA planning. This is an educational mapping, not a radiation-dose calculation.` : 'Use the reading as mission context: shielding and safe EVA timing still require a trade-off.'
+    return `<section class="panel field-panel donki-panel" aria-labelledby="donki-title"><div class="panel-heading"><div><span class="section-kicker">NASA SPACE WEATHER</span><h2 id="donki-title">DONKI snapshot</h2></div><span class="event-icon" aria-hidden="true">☀</span></div><div class="donki-status donki-${band.tone}"><b>${escapeHtml(band.label)}</b><span>${escapeHtml(status)}</span></div><p>${escapeHtml(cmeLine)}</p><p class="donki-explanation">${escapeHtml(band.explanation)} ${escapeHtml(levelNote)}</p><small class="donki-attribution">Source: NASA CCMC DONKI · archived snapshot retrieved ${this.donkiSnapshot ? escapeHtml(formatDonkiDate(this.donkiSnapshot.retrievedAt)) : 'pending'} · <a href="${DONKI_SOURCE_URL}" target="_blank" rel="noreferrer">dataset</a> · <a href="${DONKI_VIEW_URL}" target="_blank" rel="noreferrer">about DONKI</a></small></section>`
+  }
   private eventStatus(): string {
     const statuses = [this.progress.resources.oxygen, this.progress.resources.water, this.progress.resources.power, this.progress.resources.health].map(resourceStatus)
     const critical = statuses.some(status => status.label === 'Critical')
@@ -305,6 +318,7 @@ export class MissionUI {
     this.root.querySelector<HTMLElement>('.control-message small')!.textContent = level.missionControl
     this.root.querySelector<HTMLElement>('.field-panel > p')!.textContent = level.event
     this.root.querySelector<HTMLElement>('.event-status')!.innerHTML = `<span class="live-dot" aria-hidden="true"></span>${this.eventStatus()}`
+    this.root.querySelector<HTMLElement>('.donki-panel')!.outerHTML = this.donkiMarkup()
     this.root.querySelector<HTMLElement>('.crew-health')!.textContent = `${Math.round(this.progress.resources.health)}%`
     this.root.querySelector<HTMLElement>('.badge-card small')!.textContent = this.progress.badges.length ? this.progress.badges[this.progress.badges.length - 1] : `Complete Level ${level.id} to earn ${level.badge}.`
     this.root.querySelector<HTMLElement>('.badge-card b')!.textContent = this.progress.badges.length ? `${this.progress.badges.length} BADGE${this.progress.badges.length === 1 ? '' : 'S'} EARNED` : 'BADGE AWAITS'
