@@ -3,7 +3,7 @@ import type { Renderer } from '../engine/renderer'
 import type { I18n } from '../engine/i18n'
 import type { SaveStore } from '../engine/save'
 import { getLevel, LEVEL_TITLES, RESOURCE_META, SKILL_META, SYSTEM_OPTIONS, type MissionLevel, type ResourceKey, type SkillKey } from '../game/mission-data'
-import { DONKI_SOURCE_URL, DONKI_VIEW_URL, donkiTrainingBand, formatDonkiDate, latestDonkiCme, loadDonkiSnapshot, maxDonkiSpeed, type DonkiSnapshot } from '../game/donki-data'
+import { DONKI_SOURCE_URL, DONKI_VIEW_URL, donkiRiskIndex, donkiTrainingBand, formatDonkiDate, latestDonkiCme, loadDonkiSnapshot, maxDonkiSpeed, type DonkiSnapshot } from '../game/donki-data'
 import { OutpostScene } from '../game/outpost-scene'
 import { beginMission, clearProgress, confirmDecision, confirmKit, confirmLoadout, createFreshProgress, kitTotals, loadProgress, logRelativeTime, readinessScore, resetToFresh, resourceStatus, retryMission, saveProgress, selectDecision, toggleGear, toggleSupply, answerSystem, strongestSkill, weakestSkill, type MissionProgress } from '../game/mission-state'
 
@@ -49,7 +49,7 @@ export class MissionUI {
   dispose(): void { this.scene.dispose() }
 
   private shell(): string {
-    return `<div class="astra-shell">
+    return `<div class="astra-shell ${this.progress.juniorMode ? 'mode-junior' : 'mode-full'}">
       <header class="topbar">
         <button class="brand" type="button" data-action="home" aria-label="ASTRA Junior home">
           <span class="brand-orbit" aria-hidden="true"><i></i><b></b></span><span><strong>ASTRA</strong><small>JUNIOR</small></span>
@@ -74,6 +74,9 @@ export class MissionUI {
           <ol class="level-list" aria-label="Training levels">${this.levelNavigation()}</ol>
           <div class="rail-actions">
             <button class="quiet-button" type="button" data-action="help">ⓘ <span>How to play</span></button>
+            <button class="quiet-button" type="button" data-action="glossary">⌁ <span>Space glossary</span></button>
+            <button class="quiet-button" type="button" data-action="junior-mode" aria-pressed="${this.progress.juniorMode}">◒ <span>${this.progress.juniorMode ? 'Junior Mode: On' : 'Full Mode: On'}</span></button>
+            <button class="quiet-button" type="button" data-action="classroom">▤ <span>Classroom report</span></button>
             <button class="quiet-button" type="button" data-action="reset">↺ <span>Reset training</span></button>
             <button class="quiet-button" type="button" data-action="credits">⌘ <span>Credits</span></button>
           </div>
@@ -119,6 +122,8 @@ export class MissionUI {
       </div>
 
       <dialog class="astra-dialog" id="help-dialog" aria-labelledby="help-title"><button class="dialog-close" type="button" data-close aria-label="Close help">×</button><span class="section-kicker">FLIGHT SCHOOL</span><h2 id="help-title">How to play</h2><ol class="help-steps"><li><b>Read the briefing.</b><span>Mission Control tells you what the crew needs and what could go wrong.</span></li><li><b>Prepare or choose.</b><span>Match a system, pack your suit, or balance the kit limit.</span></li><li><b>Watch the trade-off.</b><span>Each choice has a benefit, a cost, and may change a later mission.</span></li><li><b>Explain your thinking.</b><span>Good astronauts share why safety, science, or resources mattered.</span></li><li><b>Review and retry.</b><span>Your mission memory shows what changed and what to practice next.</span></li></ol><p class="dialog-callout">Every space-mission decision solves one problem while possibly creating another.</p><button class="primary-button" type="button" data-close>GOT IT</button></dialog>
+      <dialog class="astra-dialog" id="glossary-dialog" aria-labelledby="glossary-title"><button class="dialog-close" type="button" data-close aria-label="Close glossary">×</button><span class="section-kicker">SPACE GLOSSARY</span><h2 id="glossary-title">Words mission planners use</h2><dl class="glossary-list"><div><dt>EVA</dt><dd>Extra-vehicular activity: a spacewalk or work outside the habitat.</dd></div><div><dt>Radiation dose</dt><dd>The amount of space radiation absorbed by a person or object.</dd></div><div><dt>Microgravity</dt><dd>A place where gravity feels very weak, such as inside an orbiting spacecraft.</dd></div><div><dt>Sol</dt><dd>One day on Mars. A Martian sol is a little longer than an Earth day.</dd></div><div><dt>Telemetry</dt><dd>Measurements sent from a spacecraft or habitat to Mission Control.</dd></div><div><dt>Space weather</dt><dd>Changing activity from the Sun that can affect radiation and radio communication.</dd></div></dl><p class="dialog-callout">NASA DONKI data in this game is an archived learning example. It is not a live forecast or a medical measurement.</p><button class="primary-button" type="button" data-close>RETURN TO MISSION</button></dialog>
+      <dialog class="astra-dialog classroom-dialog" id="classroom-dialog" aria-labelledby="classroom-title">${this.classroomMarkup()}</dialog>
       <dialog class="astra-dialog report-dialog" id="report-dialog" aria-labelledby="report-title"></dialog>
       <dialog class="astra-dialog" id="reset-dialog" aria-labelledby="reset-title"><button class="dialog-close" type="button" data-close aria-label="Close reset dialog">×</button><span class="section-kicker">TRAINING RECORD</span><h2 id="reset-title">Reset training?</h2><p>This clears ASTRA Junior progress, mission choices, and badges saved in this browser. Your browser settings and other data are unchanged.</p><div class="dialog-actions"><button class="secondary-button" type="button" data-close>KEEP PROGRESS</button><button class="danger-button" type="button" data-action="confirm-reset">RESET TRAINING</button></div></dialog>
       <dialog class="astra-dialog" id="credits-dialog" aria-labelledby="credits-title"><button class="dialog-close" type="button" data-close aria-label="Close credits">×</button><span class="section-kicker">PROJECT CREDITS</span><h2 id="credits-title">Made for curious minds</h2><p>ASTRA Junior is an original educational simulation created to practice systems thinking, safe planning, resource choices, and teamwork.</p><ul><li>Outpost scene and interface: original procedural work.</li><li>Typography: system UI font stack with platform fallbacks.</li><li>NASA space-weather data: archived CME records from the <a href="${DONKI_SOURCE_URL}" target="_blank" rel="noreferrer">NASA CCMC DONKI API</a>, retrieved 2 November 2026. DONKI means Space Weather Database of Notifications, Knowledge, Information.</li><li>Data use: the CME speed is used as kid-friendly mission context for radiation and EVA planning. It is not a radiation-dose measurement, forecast, or operational guidance.</li><li>DONKI is provided by NASA's Community Coordinated Modeling Center and the Moon-to-Mars Space Weather Analysis Office. ASTRA Junior is not a NASA product, endorsement, or official spacecraft control system. See the <a href="${DONKI_VIEW_URL}" target="_blank" rel="noreferrer">DONKI information page</a>.</li><li>Three.js: MIT; Rapier 3D remains in the supplied starter (Apache-2.0).</li><li>AI assistance: code and authored draft content were prepared with AI assistance; review and adapt before formal submission.</li></ul><p class="credits-small">No external mission-control screenshots, branded characters, or generated scene assets are used.</p></dialog>
@@ -126,6 +131,11 @@ export class MissionUI {
     </div>`
   }
 
+  private classroomMarkup(): string {
+    const completed = this.progress.completedLevels.length
+    const skills = (Object.keys(SKILL_META) as SkillKey[]).map(key => `${SKILL_META[key].label} ${Math.round(this.progress.skills[key])}%`).join(' · ')
+    return `<button class="dialog-close" type="button" data-close aria-label="Close classroom report">×</button><span class="section-kicker">CLASSROOM / FAMILY VIEW</span><h2 id="classroom-title">ASTRA Junior learning report</h2><p>This one-page summary helps a teacher, parent, or older teammate discuss the learner's mission choices. It contains no account data and is saved only in this browser.</p><div class="classroom-stat-grid"><div><b>${completed}/10</b><small>MISSIONS COMPLETE</small></div><div><b>${this.progress.badges.length}</b><small>BADGES</small></div><div><b>${readinessScore(this.progress.skills)}/100</b><small>READINESS</small></div></div><section class="classroom-section"><h3>Skills practiced</h3><p>${escapeHtml(skills)}</p></section><section class="classroom-section"><h3>Discussion prompts</h3><ol class="help-steps"><li>Which choice protected the crew most?</li><li>What did the choice cost immediately?</li><li>What delayed risk appeared later?</li><li>How did the archived NASA DONKI space-weather example change EVA planning?</li></ol></section><p class="dialog-callout">NASA source used: archived CME records from the <a href="${DONKI_SOURCE_URL}" target="_blank" rel="noreferrer">NASA CCMC DONKI API</a>, retrieved 2 November 2026. Use this report for reflection, not grading a real astronaut decision.</p><div class="dialog-actions"><button class="secondary-button" type="button" data-close>RETURN TO MISSION</button><button class="primary-button" type="button" data-action="print-classroom">PRINT / SAVE PDF</button></div>`
+  }
   private activeLevel(): MissionLevel { return getLevel(this.progress.currentLevel) ?? getLevel(1)! }
 
   private levelNavigation(): string {
@@ -140,7 +150,7 @@ export class MissionUI {
   }
 
   private resourcesMarkup(): string {
-    const order: ResourceKey[] = ['oxygen', 'water', 'power', 'food', 'health', 'materials']
+    const order: ResourceKey[] = this.progress.juniorMode ? ['oxygen', 'water', 'power', 'health'] : ['oxygen', 'water', 'power', 'food', 'health', 'materials']
     return order.map((key, index) => {
       const meta = RESOURCE_META[key]
       const value = Math.round(this.progress.resources[key])
@@ -269,11 +279,13 @@ export class MissionUI {
   private donkiMarkup(): string {
     const latest = latestDonkiCme(this.donkiSnapshot)
     const speed = maxDonkiSpeed(this.donkiSnapshot)
+    const riskIndex = donkiRiskIndex(speed)
     const band = donkiTrainingBand(speed)
     const status = this.donkiSnapshot ? `${this.donkiSnapshot.records.length} archived CME events · ${formatDonkiDate(this.donkiSnapshot.window.startDate)}–${formatDonkiDate(this.donkiSnapshot.window.endDate)}` : 'Loading NASA space-weather snapshot…'
-    const cmeLine = latest ? `Latest cataloged CME: ${formatDonkiDate(latest.startTime)} · ${latest.speedKmS ?? '—'} km/s` : 'NASA DONKI snapshot is not available right now.'
+    const cmeLine = latest ? `Latest cataloged CME: ${formatDonkiDate(latest.startTime)} · ${latest.speedKmS ?? '—'} km/s · training risk index ${riskIndex ?? '—'}/100` : 'NASA DONKI snapshot is not available right now.'
     const levelNote = this.activeLevel().id === 5 ? `Level 5 uses this reading to frame EVA planning. This is an educational mapping, not a radiation-dose calculation.` : 'Use the reading as mission context: shielding and safe EVA timing still require a trade-off.'
-    return `<section class="panel field-panel donki-panel" aria-labelledby="donki-title"><div class="panel-heading"><div><span class="section-kicker">NASA SPACE WEATHER</span><h2 id="donki-title">DONKI snapshot</h2></div><span class="event-icon" aria-hidden="true">☀</span></div><div class="donki-status donki-${band.tone}"><b>${escapeHtml(band.label)}</b><span>${escapeHtml(status)}</span></div><p>${escapeHtml(cmeLine)}</p><p class="donki-explanation">${escapeHtml(band.explanation)} ${escapeHtml(levelNote)}</p><small class="donki-attribution">Source: NASA CCMC DONKI · archived snapshot retrieved ${this.donkiSnapshot ? escapeHtml(formatDonkiDate(this.donkiSnapshot.retrievedAt)) : 'pending'} · <a href="${DONKI_SOURCE_URL}" target="_blank" rel="noreferrer">dataset</a> · <a href="${DONKI_VIEW_URL}" target="_blank" rel="noreferrer">about DONKI</a></small></section>`
+    const formula = riskIndex === null ? '' : ` Training index = highest archived speed ÷ 10 (${riskIndex}/100).`
+    return `<section class="panel field-panel donki-panel" aria-labelledby="donki-title"><div class="panel-heading"><div><span class="section-kicker">NASA SPACE WEATHER</span><h2 id="donki-title">DONKI snapshot</h2></div><span class="event-icon" aria-hidden="true">☀</span></div><div class="donki-status donki-${band.tone}"><b>${escapeHtml(band.label)}</b><span>${escapeHtml(status)}</span></div><p>${escapeHtml(cmeLine)}</p><p class="donki-explanation">${escapeHtml(band.explanation)}${escapeHtml(formula)} ${escapeHtml(levelNote)}</p><small class="donki-attribution">Source: NASA CCMC DONKI · archived snapshot retrieved ${this.donkiSnapshot ? escapeHtml(formatDonkiDate(this.donkiSnapshot.retrievedAt)) : 'pending'} · <a href="${DONKI_SOURCE_URL}" target="_blank" rel="noreferrer">dataset</a> · <a href="${DONKI_VIEW_URL}" target="_blank" rel="noreferrer">about DONKI</a></small></section>`
   }
   private eventStatus(): string {
     const statuses = [this.progress.resources.oxygen, this.progress.resources.water, this.progress.resources.power, this.progress.resources.health].map(resourceStatus)
@@ -284,6 +296,11 @@ export class MissionUI {
 
   private render(): void {
     const level = this.activeLevel()
+    this.root.querySelector<HTMLElement>('.astra-shell')?.classList.toggle('mode-junior', this.progress.juniorMode)
+    this.root.querySelector<HTMLElement>('.astra-shell')?.classList.toggle('mode-full', !this.progress.juniorMode)
+    const modeButton = this.root.querySelector<HTMLButtonElement>('[data-action="junior-mode"]')
+    modeButton?.setAttribute('aria-pressed', String(this.progress.juniorMode))
+    if (modeButton) modeButton.innerHTML = `◒ <span>${this.progress.juniorMode ? 'Junior Mode: On' : 'Full Mode: On'}</span>`
     this.root.querySelector('.training-rail')?.classList.toggle('is-open', this.mobileNavOpen)
     const menu = this.root.querySelector<HTMLButtonElement>('[data-action="mobile-menu"]')
     menu?.setAttribute('aria-expanded', String(this.mobileNavOpen))
@@ -408,6 +425,10 @@ export class MissionUI {
     if (action === 'zoom-out') { this.scene.setZoom(-1); return }
     if (action === 'reset-view') { this.scene.resetView(); return }
     if (action === 'help') { this.openDialog('help-dialog'); return }
+    if (action === 'glossary') { this.openDialog('glossary-dialog'); return }
+    if (action === 'junior-mode') { this.progress = { ...this.progress, juniorMode: !this.progress.juniorMode }; this.persist(); this.render(); this.announce(this.progress.juniorMode ? 'Junior Mode on. Four core resources are shown.' : 'Full Mode on. All resources are shown.'); return }
+    if (action === 'classroom') { const dialog = this.dialog('classroom-dialog'); dialog.innerHTML = this.classroomMarkup(); dialog.showModal(); return }
+    if (action === 'print-classroom') { window.print(); return }
     if (action === 'report') { this.renderReportDialog(); this.openDialog('report-dialog'); return }
     if (action === 'reset') { this.openDialog('reset-dialog'); return }
     if (action === 'credits') { this.openDialog('credits-dialog'); return }

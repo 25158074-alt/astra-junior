@@ -40,6 +40,8 @@ export type MissionProgress = {
   elapsedSeconds: number
   statusMessage: string
   latestOutcome: MissionOutcome | null
+  juniorMode: boolean
+  replaySeed: number
 }
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
@@ -53,7 +55,7 @@ export function createFreshProgress(now = Date.now()): MissionProgress {
     version: 1, callSign: 'CADET', currentLevel: 1, unlockedThrough: 1, completedLevels: [], badges: [],
     resources: { ...level.startingResources }, initialResources: { ...level.startingResources }, skills: defaultSkills(),
     phase: 'welcome', quizIndex: 0, quizCorrect: 0, quizAnswers: [], loadout: [], kitItems: [], selectedActionId: '', explanationDraft: '', missionLog: [], decisions: [],
-    startedAt: now, elapsedSeconds: 0, statusMessage: 'Your first training mission is ready.', latestOutcome: null,
+    startedAt: now, elapsedSeconds: 0, statusMessage: 'Your first training mission is ready.', latestOutcome: null, juniorMode: true, replaySeed: ((now % 997) + 997) % 997,
   }
 }
 
@@ -100,6 +102,8 @@ export function parseProgress(raw: string | null, now = Date.now()): MissionProg
       elapsedSeconds: clamp(Number(item.elapsedSeconds ?? 0), 0, 1_000_000),
       statusMessage: typeof item.statusMessage === 'string' ? item.statusMessage.slice(0, 240) : '',
       latestOutcome: item.latestOutcome && typeof item.latestOutcome === 'object' ? item.latestOutcome : null,
+      juniorMode: item.juniorMode !== false,
+      replaySeed: Number.isInteger(item.replaySeed) ? Math.abs(item.replaySeed!) % 997 : 0,
     }
   } catch {
     return fallback
@@ -160,6 +164,10 @@ export function beginMission(state: MissionProgress, levelId: number, now = Date
   
   // Apply delayed consequences from the PREVIOUS decision if any
   const resources = { ...level.startingResources }
+  if (levelId >= 4) {
+    const variation = (key: ResourceKey): number => ((((state.replaySeed + levelId * 17 + key.length * 11) % 3) - 1) * 2)
+    for (const key of ['oxygen', 'power', 'health'] as ResourceKey[]) resources[key] = clamp(resources[key] + variation(key))
+  }
   let log = state.missionLog
   
   const lastDecision = state.decisions.at(-1)

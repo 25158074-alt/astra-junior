@@ -22,7 +22,7 @@ pnpm preview
 
 ## Educational purpose
 
-The game practices systems thinking, safety awareness, planning, resource trade-offs, simple mission preparation, and reflective reasoning. Feedback is designed to explain why a system is affected and how a choice can have both immediate and later consequences. The missions use simplified rules and are not a source of real-world operational guidance.
+The game practices systems thinking, safety awareness, planning, resource trade-offs, simple mission preparation, and reflective reasoning. Junior Mode focuses on four core resources for younger learners; Full Mode shows the complete resource telemetry. A space glossary explains EVA, radiation dose, microgravity, sol, telemetry, and space weather. Seeded reserve variations make later missions meaningfully different on new runs while keeping the rules fair. The Classroom / Family View creates a printable reflection report with discussion prompts. Feedback is designed to explain why a system is affected and how a choice can have both immediate and later consequences. The missions use simplified rules and are not a source of real-world operational guidance.
 
 ## Development structure
 

@@ -44,6 +44,11 @@ export function maxDonkiSpeed(snapshot: DonkiSnapshot | null): number | null {
   return speeds.length ? Math.max(...speeds) : null
 }
 
+/** Educational index only: it is not a radiation dose or operational forecast. */
+export function donkiRiskIndex(speedKmS: number | null): number | null {
+  return speedKmS === null ? null : Math.min(100, Math.max(0, Math.round(speedKmS / 10)))
+}
+
 export function donkiTrainingBand(speedKmS: number | null): { label: string; tone: 'low' | 'watch' | 'high'; explanation: string } {
   if (speedKmS === null) return { label: 'DATA UNAVAILABLE', tone: 'watch', explanation: 'Use the authored safety scenario while the archived NASA dataset is unavailable.' }
   if (speedKmS >= 700) return { label: 'HIGH-SPEED EVENT', tone: 'high', explanation: 'The archived CME speed is high for this training scenario; prioritize shelter and exposure planning.' }
