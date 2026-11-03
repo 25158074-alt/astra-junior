@@ -1,7 +1,7 @@
 {
   "name": "astrajunior",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
-    "security:audit": "node scripts/security-audit.mjs"
+    "acceptance": "node scripts/acceptance.mjs",
+    "browser": "node scripts/browser-tests.mjs",
+    "acceptance:print": "node scripts/print-check.mjs",
+    "acceptance:flow": "node scripts/flow-check.mjs",
+    "security:audit": "node scripts/security-audit.mjs",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

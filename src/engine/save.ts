@@ -18,6 +18,8 @@ export type SaveData = {
   invertY: boolean
   quality: Quality
   reducedMotion: boolean
+  /** Junior Mode simplifies copy, enlarges targets, and offers reasoning sentence starters. */
+  juniorMode: boolean
   tutorialDone: boolean
   playerName: string
   leaderboard: ScoreEntry[]
@@ -37,6 +39,7 @@ export function defaultSave(): SaveData {
     invertY: false,
     quality: 'high',
     reducedMotion: false,
+    juniorMode: false,
     tutorialDone: false,
     playerName: 'PLAYER',
     leaderboard: [],
@@ -69,6 +72,7 @@ export function parseSave(raw: string | null): SaveData {
     invertY: data.invertY === true,
     quality: data.quality === 'low' || data.quality === 'medium' || data.quality === 'high' ? data.quality : base.quality,
     reducedMotion: data.reducedMotion === true,
+    juniorMode: data.juniorMode === true,
     tutorialDone: data.tutorialDone === true,
     playerName: typeof data.playerName === 'string' && data.playerName.trim() ? data.playerName.trim().slice(0, 16) : base.playerName,
     leaderboard: board

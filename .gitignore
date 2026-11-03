@@ -1,4 +1,9 @@
 node_modules/
 dist/
 .DS_Store
-*.log
+*.local
+playwright-report/
+test-results/
+/acceptance-*.png
+/acceptance-*.pdf
+/release-*.png

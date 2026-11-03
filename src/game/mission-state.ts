@@ -40,8 +40,8 @@ export type MissionProgress = {
   elapsedSeconds: number
   statusMessage: string
   latestOutcome: MissionOutcome | null
-  juniorMode: boolean
-  replaySeed: number
+  pendingDelayed: Partial<ResourceValues> | null
+  pendingDelayedLabel: string
 }
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
@@ -55,7 +55,7 @@ export function createFreshProgress(now = Date.now()): MissionProgress {
     version: 1, callSign: 'CADET', currentLevel: 1, unlockedThrough: 1, completedLevels: [], badges: [],
     resources: { ...level.startingResources }, initialResources: { ...level.startingResources }, skills: defaultSkills(),
     phase: 'welcome', quizIndex: 0, quizCorrect: 0, quizAnswers: [], loadout: [], kitItems: [], selectedActionId: '', explanationDraft: '', missionLog: [], decisions: [],
-    startedAt: now, elapsedSeconds: 0, statusMessage: 'Your first training mission is ready.', latestOutcome: null, juniorMode: true, replaySeed: ((now % 997) + 997) % 997,
+    startedAt: now, elapsedSeconds: 0, statusMessage: 'Your first training mission is ready.', latestOutcome: null, pendingDelayed: null, pendingDelayedLabel: '',
   }
 }
 
@@ -102,8 +102,8 @@ export function parseProgress(raw: string | null, now = Date.now()): MissionProg
       elapsedSeconds: clamp(Number(item.elapsedSeconds ?? 0), 0, 1_000_000),
       statusMessage: typeof item.statusMessage === 'string' ? item.statusMessage.slice(0, 240) : '',
       latestOutcome: item.latestOutcome && typeof item.latestOutcome === 'object' ? item.latestOutcome : null,
-      juniorMode: item.juniorMode !== false,
-      replaySeed: Number.isInteger(item.replaySeed) ? Math.abs(item.replaySeed!) % 997 : 0,
+      pendingDelayed: item.pendingDelayed && typeof item.pendingDelayed === 'object' ? item.pendingDelayed as Partial<ResourceValues> : null,
+      pendingDelayedLabel: typeof item.pendingDelayedLabel === 'string' ? item.pendingDelayedLabel.slice(0, 240) : '',
     }
   } catch {
     return fallback
@@ -130,72 +130,27 @@ function levelComplete(state: MissionProgress, passed: boolean, summary: string,
   const nextAvailable = getLevel(level.id + 1) ? level.id + 1 : state.unlockedThrough
   const unlockedThrough = passed ? Math.max(state.unlockedThrough, Math.min(TOTAL_LEVELS, nextAvailable)) : state.unlockedThrough
   const elapsedSeconds = Math.max(0, state.elapsedSeconds + Math.floor((now - state.startedAt) / 1000))
-  
+  const strongestSkill = (Object.keys(state.skills) as SkillKey[]).reduce((a, b) => state.skills[a] >= state.skills[b] ? a : b)
+  const weakestSkill = (Object.keys(state.skills) as SkillKey[]).reduce((a, b) => state.skills[a] <= state.skills[b] ? a : b)
+  const readiness = readinessScore(state.skills)
+  const nextTraining = passed ? LEVEL_TITLES.find(l => l.id === Math.min(TOTAL_LEVELS, level.id + 1))?.title ?? 'Mission Commander Challenge' : 'Retry this mission and try a new plan.'
+  const result: MissionOutcome = { level: level.id, passed, title: passed ? `${level.badge} earned` : 'Mission practice complete', summary, badge: passed ? level.badge : '', elapsedSeconds, readiness, strongestSkill, weakestSkill, nextTraining }
   const skills = { ...state.skills }
   if (passed) {
     skills.planning = clamp(skills.planning + 4)
     skills.explanation = clamp(skills.explanation + 3)
   }
-
-  const strongest = strongestSkill(skills)
-  const weakest = weakestSkill(skills)
-  const readiness = readinessScore(skills)
-  const nextTraining = passed ? LEVEL_TITLES.find(l => l.id === Math.min(TOTAL_LEVELS, level.id + 1))?.title ?? 'Mission Commander Challenge' : 'Retry this mission and try a new plan.'
-  
-  const result: MissionOutcome = { 
-    level: level.id, 
-    passed, 
-    title: passed ? `${level.badge} earned` : 'Mission practice complete', 
-    summary, 
-    badge: passed ? level.badge : '', 
-    elapsedSeconds, 
-    readiness, 
-    strongestSkill: strongest, 
-    weakestSkill: weakest, 
-    nextTraining 
-  }
-
   return { ...state, skills, completedLevels, badges, unlockedThrough, phase: 'outcome', elapsedSeconds, latestOutcome: result, statusMessage: summary, missionLog: addLog(state, passed ? 'Mission complete' : 'Recovery opportunity', summary, passed ? 'success' : 'warning', now) }
 }
 
 export function beginMission(state: MissionProgress, levelId: number, now = Date.now()): MissionProgress {
   const level = getLevel(levelId)
   if (!level || levelId > state.unlockedThrough) return { ...state, statusMessage: 'That mission is still locked. Complete the earlier training first.' }
-  
-  // Apply delayed consequences from the PREVIOUS decision if any
-  const resources = { ...level.startingResources }
-  if (levelId >= 4) {
-    const variation = (key: ResourceKey): number => ((((state.replaySeed + levelId * 17 + key.length * 11) % 3) - 1) * 2)
-    for (const key of ['oxygen', 'power', 'health'] as ResourceKey[]) resources[key] = clamp(resources[key] + variation(key))
-  }
-  let log = state.missionLog
-  
-  const lastDecision = state.decisions.at(-1)
-  if (lastDecision) {
-    const prevLevel = getLevel(lastDecision.level)
-    const prevAction = prevLevel?.actions?.find(a => lastDecision.outcome.startsWith(a.outcome))
-    if (prevAction?.delayedDelta) {
-      const deltas = prevAction.delayedDelta
-      let detail = "Applied consequences from your earlier command: "
-      const parts: string[] = []
-      for (const key of Object.keys(deltas) as ResourceKey[]) {
-        const change = deltas[key] ?? 0
-        if (change === 0) continue
-        resources[key] = clamp(resources[key] + change)
-        parts.push(`${getResourceMeta(key).label} ${change > 0 ? "+" : ""}${change}%`)
-      }
-      if (parts.length > 0) {
-        detail += parts.join(", ")
-      log = [...log, { id: `delayed-${now}`, time: stamp(now), title: 'Delayed Consequence', detail, kind: 'info' as const }].slice(-100)
-      }
-    }
-  }
-
   return {
-    ...state, currentLevel: levelId, resources, initialResources: { ...resources },
+    ...state, currentLevel: levelId, resources: { ...level.startingResources }, initialResources: { ...level.startingResources },
     phase: 'playing', quizIndex: 0, quizCorrect: 0, quizAnswers: [], loadout: [], kitItems: [], selectedActionId: '', explanationDraft: '', startedAt: now,
-    elapsedSeconds: 0, latestOutcome: null, statusMessage: level.objective,
-    missionLog: addLog({ ...state, missionLog: log }, `Level ${String(levelId).padStart(2, '0')} briefing`, level.briefing, 'info', now),
+    elapsedSeconds: 0, latestOutcome: null, pendingDelayed: null, pendingDelayedLabel: '', statusMessage: level.objective,
+    missionLog: addLog(state, `Level ${String(levelId).padStart(2, '0')} briefing`, level.briefing, 'info', now),
   }
 }
 
@@ -240,7 +195,7 @@ export function confirmDecision(state: MissionProgress, now = Date.now(), explan
   const decision: DecisionMemory = { level: level.id, title: action.title, outcome: `${action.outcome} ${action.benefit} Cost: ${action.cost} Delayed risk: ${action.delayedRisk} Cause → effect → later: ${action.causeChain.join(' → ')} Player explanation: “${why}”`, risk: action.risk, at: now, why }
   const safe = Math.min(resources.oxygen, resources.water, resources.power, resources.health) >= 18
   const passed = safe || action.risk !== 'high'
-  const next = { ...state, resources, skills, selectedActionId: '', explanationDraft: '', decisions: [...state.decisions, decision], missionLog: addLog(state, action.title, decision.outcome, passed ? 'success' : 'warning', now), statusMessage: decision.outcome }
+  const next = { ...state, resources, skills, selectedActionId: '', explanationDraft: '', pendingDelayed: action.delayedDelta, pendingDelayedLabel: `Delayed consequence queued: ${action.delayedRisk}`, decisions: [...state.decisions, decision], missionLog: addLog(state, action.title, decision.outcome, passed ? 'success' : 'warning', now), statusMessage: `${decision.outcome} Delayed consequence queued: ${action.delayedRisk}` }
   return levelComplete(next, passed, passed ? `${action.outcome} Your explanation showed how a priority creates both an immediate effect and a later consequence.` : `The choice created a recovery opportunity. Review the delayed risk, then retry with a safer priority.`, now)
 }
 
@@ -322,6 +277,15 @@ export function confirmKit(state: MissionProgress, now = Date.now(), explanation
   const decision = { level: 3, title: 'Packed a balanced mission kit', outcome: `The kit uses ${totals.massKg} of ${level.massLimitKg} kg and ${totals.storage} of ${level.storageLimit} storage units. ${chain} Player explanation: “${why}”`, risk: state.kitItems.includes('science-tools') ? 'medium' as const : 'low' as const, at: now, why }
   const next = { ...state, skills, explanationDraft: '', resources: { ...state.resources, food: clamp(state.resources.food - 2), water: clamp(state.resources.water - 2), materials: clamp(state.resources.materials - 1) }, decisions: [...state.decisions, decision], statusMessage: `${decision.outcome}`, missionLog: addLog(state, 'Cargo kit secured', decision.outcome, 'success', now) }
   return levelComplete(next, true, 'Your kit covers crew needs, repair, and an emergency backup without exceeding either limit.', now)
+}
+
+export function resolveDelayedConsequence(state: MissionProgress, now = Date.now()): MissionProgress {
+  if (!state.pendingDelayed) return state
+  const resources = { ...state.resources }
+  for (const key of Object.keys(state.pendingDelayed) as ResourceKey[]) resources[key] = clamp(resources[key] + (state.pendingDelayed[key] ?? 0))
+  const changes = (Object.entries(state.pendingDelayed) as Array<[ResourceKey, number]>).filter(([, value]) => value)
+    .map(([key, value]) => `${RESOURCE_META[key].label} ${value > 0 ? '+' : '−'}${Math.abs(value)}%`).join(', ')
+  return { ...state, resources, pendingDelayed: null, pendingDelayedLabel: '', statusMessage: `${state.latestOutcome?.summary ?? 'Mission consequence recorded.'} Delayed consequence applied: ${changes}.`, missionLog: addLog(state, 'Delayed consequence applied', changes || 'The delayed consequence was reviewed.', 'warning', now) }
 }
 
 export function retryMission(state: MissionProgress, now = Date.now()): MissionProgress { return beginMission(state, state.currentLevel, now) }

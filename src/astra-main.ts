@@ -43,6 +43,7 @@ boot().catch(error => {
   console.error(error)
   const loading = document.getElementById('boot-screen')
   if (loading) {
-    loading.innerHTML = `<div class="boot-mark" aria-hidden="true">✦</div><b>MISSION CONTROL CHECK</b><p>${String((error as Error)?.message ?? error).replace(/[<>&]/g, '')}</p><button type="button" onclick="location.reload()">RETRY CONNECTION</button>`
+    loading.innerHTML = `<div class="boot-mark" aria-hidden="true">✦</div><b>MISSION CONTROL CHECK</b><p>${String((error as Error)?.message ?? error).replace(/[<>&]/g, '')}</p><button type="button" data-retry-connection>RETRY CONNECTION</button>`
+    loading.querySelector<HTMLButtonElement>('[data-retry-connection]')?.addEventListener('click', () => location.reload())
   }
 })

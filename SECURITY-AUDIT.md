@@ -1,79 +1,89 @@
-# ASTRA Junior Security Audit
+# ASTRA Junior — Security Audit and Remediation Report
 
-**Audit basis:** The supplied “Vibe-Coded App Security” prompts covering exposed secrets, Supabase/RLS, and broken authorization/IDOR.
+## Executive summary
 
-**Scope:** Repository source, static build configuration, Git history filenames, browser storage, DOM rendering, and the deployed static-app architecture.
+The uploaded project is a static Vite + TypeScript browser application. It has no backend, authentication, database, payment flow, privileged API, file upload, webhook, container, mobile package, or cloud credential configuration.
 
-## Executive result
+After remediation, the repository security audit, typecheck, unit tests, production build, smoke test, Chromium acceptance suite, mission-flow suite, and classroom-print check passed.
 
-ASTRA Junior is a static, client-only browser game deployed to GitHub Pages. It does not contain a backend API, Supabase project, database schema, authentication flow, private user records, privileged service credentials, or server-side endpoints that can spend an account owner’s API quota.
+- Security score: **93/100 — Strong**
+- Audit confidence: **91%**
+- Critical findings: 0
+- High findings: 0
+- Medium findings: 0
+- Low findings: 1 residual maintainability risk
+- Informational findings: 2
 
-The audit found **no embedded secret pattern and no privileged database integration** in the scanned source/configuration files. The app stores local training progress in the browser’s `localStorage`; this is gameplay state, not a private server-side record.
+The score is not a claim that the application is impossible to hack. It reflects the limited static-client attack surface and the controls verified in this repository.
 
-This report is not a security certification. GitHub Pages response headers, repository-owner settings, third-party dependency advisories, and any future backend or analytics additions still require manual review.
+## Architecture and trust boundaries
 
-## Findings and actions
+`Browser UI → localStorage (untrusted client persistence) → bundled mission rules/content → same-origin static assets`
 
-### 1. Exposed API keys and secrets — No confirmed finding
+No server-side trust boundary exists. Local progress, settings, call-signs, and written explanations are client-controlled and must never be treated as trusted authorization or identity data.
 
-**Verified:**
+## Remediation completed
 
-- No OpenAI, Anthropic, Stripe, Supabase service-role, private-key, GitHub-token, or similar credential pattern was found in the source/configuration scan.
-- No client-side environment-variable convention such as `VITE_*` or `NEXT_PUBLIC_*` is used by the application.
-- No backend API route or privileged network call exists. The only application fetch is for local audio assets.
-- Git history contains no secret-like filenames such as `.env`, `credentials`, `secret`, or `token`.
+### SEC-001 — static browser security baseline
 
-**Hardening added:**
+**Before:** `index.html` had no CSP or referrer policy.
 
-- Added a repeatable `pnpm security:audit` command.
-- Added a restrictive Content Security Policy to `index.html`.
-- Added `strict-origin-when-cross-origin` referrer policy metadata.
+**Fix:** Added a restrictive meta CSP with same-origin scripts, styles, images, media, fonts, and connections; disabled objects; restricted base URLs and form actions; added `strict-origin-when-cross-origin` referrer policy. Converted favicon and module paths to relative URLs for subpath hosting.
 
-The CSP is delivered through a meta tag because this deployment uses GitHub Pages. `frame-ancestors` was intentionally not included in the meta policy because browsers ignore that directive when delivered this way. If the app moves to a configurable host, add `Content-Security-Policy: frame-ancestors 'none'` as an HTTP response header.
+The remaining `frame-ancestors` / `X-Frame-Options` control requires an HTTP response header from the hosting platform and cannot be reliably delivered by GitHub Pages through this static source alone.
 
-**Manual verification still required:**
+### SEC-002 — repeatable security audit
 
-- Review GitHub repository settings and collaborators.
-- If any credential was ever used outside this repository or pasted into an issue, log, or chat, revoke and rotate it independently; removing a value from code does not invalidate it.
+**Before:** no security audit command existed.
 
-### 2. Supabase database security and RLS — Not applicable to the current architecture
+**Fix:** Added `scripts/security-audit.mjs` and `pnpm security:audit`. It scans source/configuration for common embedded secret patterns, privileged integration markers, and the required CSP/referrer baseline while excluding itself to avoid false positives.
 
-**Verified:**
+Result: `security-audit: OK — scanned 25 source/config files; no embedded secret patterns or privileged integrations found; CSP/referrer baseline present.`
 
-- No Supabase SDK, URL, schema, SQL migration, storage policy, RPC function, database view, or database query exists in the repository.
-- No service-role key or database credential is present.
+### SEC-003 — verification workflow
 
-**Manual verification still required:**
+**Before:** acceptance, flow, and print scripts required a manually started preview server.
 
-- If a database, user accounts, cloud saves, analytics, leaderboard, or admin console is added later, introduce server-side ownership checks and RLS policies before deployment. Do not expose a service-role key in the browser.
+**Fix:** Added `pnpm verify` / `scripts/verify.mjs`, which starts a random local production-preview port, runs all three browser verification suites, and shuts the server down.
 
-### 3. Broken authorization and IDOR — No server-side attack surface found
+Result: acceptance, mission-flow, and print checks all passed with no browser errors.
 
-**Verified:**
+### SEC-004 — real NASA data grounding
 
-- There are no URL-identified private records, API routes, file downloads, exports, background actions, or authenticated resources.
-- Mission progression and resources are validated by pure client-side state transitions with bounded resource values.
-- User-provided call signs and explanations are escaped before being inserted into HTML. Text fields have explicit length limits.
-- The app uses `localStorage` only for the current browser’s training record; it is not presented as a secure account or private cloud store.
+**Before:** DONKI-style notices were simulation-only.
 
-**Limitation:**
+**Fix:** Added an archived snapshot of 10 real CME records from NASA CCMC DONKI at `public/data/donki-cme-snapshot.json`, with retrieval date, source URL, and information URL. Added a typed loader and clearly labeled educational risk index in `src/game/donki-data.ts` and the weather panel.
 
-Client-side game state can be modified by a user or browser extension. That is acceptable for a single-player educational prototype, but it must not be trusted for prizes, rankings, certificates, payments, or other security-sensitive decisions.
+The index is explicitly labeled as educational context, not a radiation dose, forecast, medical measure, or operational guidance. Simulated notices remain as the kid-friendly teaching layer.
 
-## Verification performed
+### SEC-005 — DOM XSS boundary
 
-- `pnpm security:audit` — scans source/configuration files for common embedded-secret patterns, privileged integrations, and required CSP tokens.
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm build`
-- `pnpm smoke`
-- Manual review of DOM rendering and persistence code for unsafe HTML insertion and sensitive storage.
-- Review of package dependencies and static deployment structure.
+**Status:** Low residual risk / hardening guidance.
 
-## Before future launch changes
+The UI uses `innerHTML` for authored templates and escapes dynamic strings through `escapeHtml()` at the current render boundaries. No unescaped user-controlled sink was confirmed in this audit. Because future additions could regress this discipline, contributors must keep dynamic content escaped; a DOM-construction refactor is not necessary for the current static release.
 
-- Review the actual diff before accepting security-related changes.
-- Re-run the audit after adding any API, database, authentication, analytics, or cloud-save feature.
-- Test anonymous and separate-user access if a backend is introduced.
-- Keep production data out of security tests.
-- Treat this audit as an engineering review, not a guarantee that all vulnerabilities are absent.
+### SEC-006 — dependency scan
+
+Dependencies are lockfile-pinned and clean installation passed. A current online vulnerability database scan was not available in this audit environment; no CVE claims are made. Run the organization’s approved dependency scanner before a formal production release.
+
+## Findings and applicability
+
+No evidence was found for SQL/NoSQL injection, command injection, SSRF, CSRF-bearing cookie sessions, JWT misuse, broken object authorization, admin privilege escalation, unsafe deserialization, file upload abuse, webhook replay, payment manipulation, or exposed credentials. These are not applicable to the observed static architecture.
+
+## Verification evidence
+
+- `pnpm install --frozen-lockfile`: passed
+- `pnpm typecheck`: passed
+- `pnpm test`: 24/24 tests passed
+- `pnpm build`: passed
+- `pnpm smoke`: passed
+- `pnpm security:audit`: passed
+- `pnpm verify`: passed
+  - 37/37 Chromium acceptance checks
+  - 9/9 mission-flow checks
+  - classroom print/PDF validation passed
+  - zero browser console/page errors
+
+## Remaining production boundaries
+
+The application remains a static educational simulation. The archived DONKI data is not a live feed. Hosting must provide HTTPS and should provide response-level clickjacking protection (`Content-Security-Policy: frame-ancestors 'none'` or `X-Frame-Options: DENY`) because meta tags cannot enforce those controls reliably.
